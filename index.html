@@ -1,0 +1,890 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NUMERIA - Quebra-Cabeça Deslizante</title>
+
+  <!-- Configurações PWA e iOS -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NUMERIA">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tile, .modal-overlay, .btn {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    body.high-contrast {
+      background: #000000 !important;
+      color: #ffffff !important;
+    }
+
+    body.high-contrast .tile {
+      background: #000000 !important;
+      color: #ffff00 !important;
+      border: 3px solid #ffff00 !important;
+      box-shadow: none !important;
+    }
+
+    body.high-contrast .tile.correct {
+      color: #00ff00 !important;
+      border-color: #00ff00 !important;
+    }
+
+    body.high-contrast .btn {
+      background: #000000 !important;
+      color: #ffff00 !important;
+      border: 2px solid #ffff00 !important;
+    }
+
+    body.high-contrast .board-container,
+    body.high-contrast .stats-bar,
+    body.high-contrast .leaderboard-section {
+      border: 2px solid #ffffff !important;
+      background: #000000 !important;
+    }
+
+    body.high-contrast input[type="text"] {
+      background: #000000 !important;
+      color: #ffffff !important;
+      border: 2px solid #ffff00 !important;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-width: 440px;
+      width: 100%;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      background: linear-gradient(to right, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+
+    body.high-contrast h1 {
+      background: none;
+      -webkit-text-fill-color: initial;
+      color: #ffff00;
+    }
+
+    p.subtitle {
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+
+    body.high-contrast p.subtitle {
+      color: #ffffff;
+    }
+
+    .accessibility-bar {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn-toggle {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.8rem;
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-toggle:focus-visible,
+    .btn:focus-visible,
+    .tile:focus-visible,
+    input:focus-visible {
+      outline: 4px solid #facc15 !important;
+      outline-offset: 2px;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 20px;
+      border-radius: 12px;
+    }
+
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 2px;
+    }
+
+    body.high-contrast .stat-label {
+      color: #ffffff;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      font-variant-numeric: tabular-nums;
+    }
+
+    body.high-contrast .stat-value {
+      color: #ffff00;
+    }
+
+    .controls {
+      width: 100%;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+      background: #2563eb;
+    }
+
+    .board-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      max-height: 60vh;
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 10px;
+      border: 2px solid #334155;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      touch-action: none;
+    }
+
+    .board {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .tile {
+      position: absolute;
+      width: calc(25% - 5px);
+      height: calc(25% - 5px);
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1.4rem, 6vw, 1.8rem);
+      font-weight: 700;
+      color: #38bdf8;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 8px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0.2, 1);
+      touch-action: none;
+    }
+
+    .tile.correct {
+      color: #4ade80;
+      border-color: rgba(74, 222, 128, 0.5);
+    }
+
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 10;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .win-title {
+      font-size: 1.6rem;
+      color: #4ade80;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    body.high-contrast .win-title {
+      color: #00ff00;
+    }
+
+    .win-stats {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .name-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 280px;
+      margin-top: 4px;
+    }
+
+    .name-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #f8fafc;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      font-size: 0.85rem;
+    }
+
+    .leaderboard-table th, .leaderboard-table td {
+      padding: 6px 8px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .leaderboard-table th {
+      color: #38bdf8;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+
+    body.high-contrast .leaderboard-table th {
+      color: #ffff00;
+    }
+
+    .leaderboard-section {
+      width: 100%;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .leaderboard-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #38bdf8;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    body.high-contrast .leaderboard-title {
+      color: #ffff00;
+    }
+
+    footer {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    body.high-contrast footer {
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="container">
+    <header>
+      <h1>NUMERIA</h1>
+      <p class="subtitle">Ordene os números de 1 a 15 no menor tempo</p>
+    </header>
+
+    <div class="accessibility-bar" role="region" aria-label="Acessibilidade">
+      <button id="contrast-btn" class="btn-toggle" aria-pressed="false">
+        👁️ Alto Contraste
+      </button>
+      <button id="sound-btn" class="btn-toggle" aria-pressed="true">
+        🔊 Som (Ativado)
+      </button>
+    </div>
+
+    <div class="stats-bar" role="region" aria-label="Estatísticas da partida">
+      <div class="stat-box">
+        <span class="stat-label" id="label-moves">Movimentos</span>
+        <span id="moves" class="stat-value" aria-labelledby="label-moves">0</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label" id="label-time">Tempo</span>
+        <span id="time" class="stat-value" aria-labelledby="label-time">00:00</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="shuffle-btn" class="btn btn-primary" aria-label="Iniciar novo jogo e embaralhar peças">
+        🎮 Novo Jogo
+      </button>
+    </div>
+
+    <div class="board-container" id="board-container">
+      <div id="board" class="board" role="grid" aria-label="Tabuleiro de números NUMERIA, 4 por 4"></div>
+
+      <div id="win-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="win-title" aria-hidden="true">
+        <div id="win-title" class="win-title">🎉 Parabéns!</div>
+        <div class="win-stats">
+          Você completou o <strong>NUMERIA</strong> em <strong id="final-moves">0</strong> movimentos!<br>
+          Tempo total: <strong id="final-time">00:00</strong>
+        </div>
+
+        <div id="name-form-container" class="name-form">
+          <label for="player-name-input" class="stat-label" style="text-align: center;">Registe o seu nome:</label>
+          <input type="text" id="player-name-input" class="name-input" placeholder="Seu nome ou apelido" maxlength="15" autocomplete="off">
+          <button id="save-score-btn" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9rem;">
+            Salvar Recorde
+          </button>
+        </div>
+
+        <div id="modal-leaderboard" style="display: none; width: 100%;">
+          <div class="leaderboard-title">🏆 Top 5 Recordes</div>
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nome</th>
+                <th>Mov.</th>
+                <th>Tempo</th>
+              </tr>
+            </thead>
+            <tbody id="modal-leaderboard-body"></tbody>
+          </table>
+        </div>
+
+        <button id="restart-btn" class="btn btn-primary" style="width: auto; padding: 8px 20px; font-size: 0.9rem; margin-top: 6px;">
+          Jogar Novamente
+        </button>
+      </div>
+    </div>
+
+    <div class="leaderboard-section">
+      <div class="leaderboard-title">🏆 Melhores Pontuações (Top 5)</div>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nome</th>
+            <th>Mov.</th>
+            <th>Tempo</th>
+          </tr>
+        </thead>
+        <tbody id="main-leaderboard-body">
+          <tr><td colspan="4" style="color: #94a3b8;">Nenhum recorde registrado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      Instruções: Toque ou clique em qualquer peça adjacente ao espaço vazio para movê-la.
+    </footer>
+  </div>
+
+  <script>
+    const GRID_SIZE = 4;
+    const TOTAL_TILES = GRID_SIZE * GRID_SIZE;
+
+    let boardState = [];
+    let emptyIndex = TOTAL_TILES - 1;
+    let moveCount = 0;
+    let timer = null;
+    let secondsElapsed = 0;
+    let isGameActive = false;
+    let soundEnabled = true;
+    let isTransitioning = false;
+
+    // DOM Elements
+    const boardEl = document.getElementById('board');
+    const movesEl = document.getElementById('moves');
+    const timeEl = document.getElementById('time');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const winModal = document.getElementById('win-modal');
+    const finalMovesEl = document.getElementById('final-moves');
+    const finalTimeEl = document.getElementById('final-time');
+    const contrastBtn = document.getElementById('contrast-btn');
+    const soundBtn = document.getElementById('sound-btn');
+    const announcer = document.getElementById('sr-announcer');
+
+    const nameFormContainer = document.getElementById('name-form-container');
+    const playerNameInput = document.getElementById('player-name-input');
+    const saveScoreBtn = document.getElementById('save-score-btn');
+    const modalLeaderboard = document.getElementById('modal-leaderboard');
+    const modalLeaderboardBody = document.getElementById('modal-leaderboard-body');
+    const mainLeaderboardBody = document.getElementById('main-leaderboard-body');
+
+    function announce(message) {
+      announcer.innerText = '';
+      setTimeout(() => { announcer.innerText = message; }, 50);
+    }
+
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playSlideSound() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(90, now + 0.05);
+
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      } catch (e) {}
+    }
+
+    function playWinSound() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          const noteTime = now + (idx * 0.09);
+          gain.gain.setValueAtTime(0.15, noteTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.25);
+        });
+      } catch (e) {}
+    }
+
+    // --- LÓGICA DE RECORDES (BEST SCORES / LOCALSTORAGE) ---
+    function getScores() {
+      const data = localStorage.getItem('numeria_scores');
+      return data ? JSON.parse(data) : [];
+    }
+
+    function saveScore(name, moves, time) {
+      const scores = getScores();
+      scores.push({ name: name || 'Jogador Anônimo', moves: moves, time: time });
+      
+      scores.sort((a, b) => {
+        if (a.moves !== b.moves) return a.moves - b.moves;
+        return a.time - b.time;
+      });
+
+      const top5 = scores.slice(0, 5);
+      localStorage.setItem('numeria_scores', JSON.stringify(top5));
+      renderLeaderboards();
+    }
+
+    function renderLeaderboards() {
+      const scores = getScores();
+
+      const renderRows = (tbody) => {
+        if (scores.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="color: #94a3b8;">Nenhum recorde registrado.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = scores.map((score, index) => `
+          <tr>
+            <td><strong>${index + 1}º</strong></td>
+            <td>${escapeHTML(score.name)}</td>
+            <td>${score.moves}</td>
+            <td>${formatTime(score.time)}</td>
+          </tr>
+        `).join('');
+      };
+
+      renderRows(mainLeaderboardBody);
+      renderRows(modalLeaderboardBody);
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    function initGame() {
+      boardEl.innerHTML = '';
+      boardState = [];
+
+      for (let i = 0; i < TOTAL_TILES - 1; i++) {
+        const val = i + 1;
+        boardState.push(val);
+
+        const tile = document.createElement('button');
+        tile.classList.add('tile');
+        tile.dataset.value = val;
+        tile.innerText = val;
+        tile.setAttribute('role', 'gridcell');
+
+        tile.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleTileInteraction(val);
+        });
+
+        tile.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        boardEl.appendChild(tile);
+      }
+
+      boardState.push(0);
+      emptyIndex = TOTAL_TILES - 1;
+
+      renderLeaderboards();
+      shuffle();
+    }
+
+    function updateBoardView() {
+      const tiles = boardEl.querySelectorAll('.tile');
+
+      tiles.forEach(tile => {
+        const val = parseInt(tile.dataset.value);
+        const index = boardState.indexOf(val);
+        const row = Math.floor(index / GRID_SIZE);
+        const col = index % GRID_SIZE;
+
+        const left = col * 25 + 0.8;
+        const top = row * 25 + 0.8;
+
+        tile.style.transform = `translate(${left * 4}%, ${top * 4}%)`;
+
+        const isCorrect = (index === val - 1);
+        if (isCorrect) {
+          tile.classList.add('correct');
+        } else {
+          tile.classList.remove('correct');
+        }
+
+        const status = isCorrect ? "posição correta" : "posição incorreta";
+        tile.setAttribute('aria-label', `Peça ${val}, linha ${row + 1}, coluna ${col + 1}, ${status}`);
+      });
+    }
+
+    function isSolvable(arr) {
+      let inversions = 0;
+      const puzzleTiles = arr.filter(val => val !== 0);
+
+      for (let i = 0; i < puzzleTiles.length; i++) {
+        for (let j = i + 1; j < puzzleTiles.length; j++) {
+          if (puzzleTiles[i] > puzzleTiles[j]) inversions++;
+        }
+      }
+
+      const emptyRowFromBottom = GRID_SIZE - Math.floor(arr.indexOf(0) / GRID_SIZE);
+      return (GRID_SIZE % 2 !== 0) ? (inversions % 2 === 0) :
+             ((emptyRowFromBottom % 2 === 0) ? (inversions % 2 !== 0) : (inversions % 2 === 0));
+    }
+
+    function shuffle() {
+      stopTimer();
+      resetStats();
+      winModal.classList.remove('active');
+      winModal.setAttribute('aria-hidden', 'true');
+      isTransitioning = false;
+
+      do {
+        for (let i = boardState.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [boardState[i], boardState[j]] = [boardState[j], boardState[i]];
+        }
+      } while (!isSolvable(boardState) || isSolved());
+
+      emptyIndex = boardState.indexOf(0);
+      updateBoardView();
+      isGameActive = true;
+      announce("Jogo iniciado e tabuleiro embaralhado. Boa sorte!");
+    }
+
+    function handleTileInteraction(val) {
+      if (!isGameActive || isTransitioning) return;
+
+      const tileIndex = boardState.indexOf(val);
+      if (canMove(tileIndex)) {
+        moveTile(tileIndex, val);
+      }
+    }
+
+    function canMove(index) {
+      const tileRow = Math.floor(index / GRID_SIZE);
+      const tileCol = index % GRID_SIZE;
+      const emptyRow = Math.floor(emptyIndex / GRID_SIZE);
+      const emptyCol = emptyIndex % GRID_SIZE;
+
+      return (Math.abs(tileRow - emptyRow) === 1 && tileCol === emptyCol) ||
+             (Math.abs(tileCol - emptyCol) === 1 && tileRow === emptyRow);
+    }
+
+    function moveTile(index, val) {
+      isTransitioning = true;
+
+      if (moveCount === 0) startTimer();
+
+      [boardState[index], boardState[emptyIndex]] = [boardState[emptyIndex], boardState[index]];
+      emptyIndex = index;
+
+      moveCount++;
+      movesEl.innerText = moveCount;
+
+      playSlideSound();
+      updateBoardView();
+
+      announce(`Peça ${val} movida.`);
+
+      if (isSolved()) {
+        handleWin();
+      }
+
+      setTimeout(() => {
+        isTransitioning = false;
+      }, 200);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (!isGameActive || isTransitioning) return;
+      const emptyRow = Math.floor(emptyIndex / GRID_SIZE);
+      const emptyCol = emptyIndex % GRID_SIZE;
+      let targetIndex = -1;
+
+      if (e.key === 'ArrowUp' && emptyRow < GRID_SIZE - 1) targetIndex = emptyIndex + GRID_SIZE;
+      else if (e.key === 'ArrowDown' && emptyRow > 0) targetIndex = emptyIndex - GRID_SIZE;
+      else if (e.key === 'ArrowLeft' && emptyCol < GRID_SIZE - 1) targetIndex = emptyIndex + 1;
+      else if (e.key === 'ArrowRight' && emptyCol > 0) targetIndex = emptyIndex - 1;
+
+      if (targetIndex !== -1) {
+        e.preventDefault();
+        moveTile(targetIndex, boardState[targetIndex]);
+      }
+    });
+
+    function isSolved() {
+      for (let i = 0; i < TOTAL_TILES - 1; i++) {
+        if (boardState[i] !== i + 1) return false;
+      }
+      return boardState[TOTAL_TILES - 1] === 0;
+    }
+
+    function handleWin() {
+      isGameActive = false;
+      stopTimer();
+      playWinSound();
+
+      finalMovesEl.innerText = moveCount;
+      finalTimeEl.innerText = formatTime(secondsElapsed);
+
+      nameFormContainer.style.display = 'flex';
+      modalLeaderboard.style.display = 'none';
+      playerNameInput.value = '';
+
+      winModal.classList.add('active');
+      winModal.setAttribute('aria-hidden', 'false');
+      playerNameInput.focus();
+
+      announce(`Parabéns! Você venceu o NUMERIA em ${moveCount} movimentos e tempo total de ${formatTime(secondsElapsed)}.`);
+    }
+
+    saveScoreBtn.addEventListener('click', () => {
+      const name = playerNameInput.value.trim() || 'Jogador Anônimo';
+      saveScore(name, moveCount, secondsElapsed);
+
+      nameFormContainer.style.display = 'none';
+      modalLeaderboard.style.display = 'block';
+
+      announce("Recorde salvo com sucesso!");
+      restartBtn.focus();
+    });
+
+    playerNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        saveScoreBtn.click();
+      }
+    });
+
+    function startTimer() {
+      stopTimer();
+      secondsElapsed = 0;
+      timer = setInterval(() => {
+        secondsElapsed++;
+        timeEl.innerText = formatTime(secondsElapsed);
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timer) clearInterval(timer);
+    }
+
+    function resetStats() {
+      moveCount = 0;
+      secondsElapsed = 0;
+      movesEl.innerText = '0';
+      timeEl.innerText = '00:00';
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    contrastBtn.addEventListener('click', () => {
+      const isHigh = document.body.classList.toggle('high-contrast');
+      contrastBtn.setAttribute('aria-pressed', isHigh ? 'true' : 'false');
+      contrastBtn.innerText = isHigh ? '👁️ Alto Contraste (Ativo)' : '👁️ Alto Contraste';
+      announce(isHigh ? "Modo de alto contraste ativado." : "Modo de alto contraste desativado.");
+    });
+
+    soundBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      soundBtn.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+      soundBtn.innerText = soundEnabled ? '🔊 Som (Ativado)' : '🔇 Som (Desativado)';
+      announce(soundEnabled ? "Sons do jogo ativados." : "Sons do jogo desativados.");
+    });
+
+    shuffleBtn.addEventListener('click', shuffle);
+    restartBtn.addEventListener('click', shuffle);
+
+    window.addEventListener('DOMContentLoaded', initGame);
+
+    // Registro do Service Worker para suporte PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.error('Erro ao registrar Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>
